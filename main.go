@@ -10,6 +10,7 @@ import (
 
 	"example.com/m/db"
 	"example.com/m/handlers"
+	"example.com/m/middleware"
 	"github.com/gorilla/mux"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -17,10 +18,13 @@ import (
 )
 
 func main() {
-	godotenv.Load()
-	db.InitDatabase()
-	l := log.New(os.Stdout, "urlshortener ", log.LstdFlags)
-	sm := mux.NewRouter()
+	godotenv.Load()                                         // load enviromental variables
+	db.InitDatabase()                                       // connect to the database
+	l := log.New(os.Stdout, "urlshortener ", log.LstdFlags) // create a logger (in this case to stdout, but could be any io.Writer)
+
+	sm := mux.NewRouter() // main router
+
+	sm.Use(middleware.CORS) // add CORs to all routes
 
 	sh := handlers.NewShorturl(l)
 
@@ -28,7 +32,7 @@ func main() {
 	getRouter.HandleFunc("/api/shorturl/{short}", sh.GetShorturl)
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/api/shorturl/{original}", sh.PostShorturl)
+	postRouter.HandleFunc("/api/shorturl", sh.PostShorturl)
 
 	s := &http.Server{
 		Addr:         ":8080",
@@ -45,6 +49,7 @@ func main() {
 		}
 	}()
 
+	// listen for Kill or Interrupt and gracefully shut down the program
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Kill)
 	signal.Notify(sigChan, os.Interrupt)

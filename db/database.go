@@ -31,3 +31,15 @@ func AddNew(n string) (int64, error) {
 
 	return id, nil
 }
+
+func GetOriginal(id int) (string, error) {
+	var original string
+
+	err := database.QueryRow("SELECT original_url FROM urls WHERE id = ?", id).Scan(&original)
+
+	if err != nil {
+		return "", err
+	}
+
+	return original, nil
+}

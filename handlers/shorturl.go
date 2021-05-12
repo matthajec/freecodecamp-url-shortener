@@ -20,34 +20,37 @@ func NewShorturl(l *log.Logger) *shorturl {
 }
 
 func (s *shorturl) GetShorturl(rw http.ResponseWriter, r *http.Request) {
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(rw, "Unable to read body", http.StatusBadRequest)
-	}
-
-	fmt.Println(data)
-
 	s.l.Println("Handle GET shorturl")
 
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["short"])
 	if err != nil {
 		http.Error(rw, "Unable to get original URL", http.StatusBadRequest)
+		return
 	}
 
-	fmt.Println(id)
+	original, err := db.GetOriginal(id)
+	if err != nil {
+		http.Error(rw, "Unable to get original URL", http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(rw, r, original, http.StatusFound)
 }
 
 func (s *shorturl) PostShorturl(rw http.ResponseWriter, r *http.Request) {
 	s.l.Println("Handle POST shorturl")
 
-	vars := mux.Vars(r)
-	original := vars["original"]
-
-	id, err := db.AddNew(original)
-
+	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(rw, "Unable to get original URL", http.StatusInternalServerError)
+		http.Error(rw, "Unable to read body", http.StatusBadRequest)
+		return
+	}
+
+	id, err := db.AddNew(string(data))
+	if err != nil {
+		http.Error(rw, "Unable to add URL", http.StatusInternalServerError)
+		return
 	}
 
 	fmt.Println(id)
